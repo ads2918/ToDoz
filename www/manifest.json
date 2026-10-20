@@ -1,0 +1,8 @@
+{
+  "name": "To Doz",
+  "short_name": "To Doz",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#2b6cb0",
+  "theme_color": "#2b6cb0"
+}

@@ -1,0 +1,81 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "com.astephens.todobubble"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        // Play Store package name (permanent once published)
+        applicationId "com.astephens.todoz"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        // Bump versionCode by 1 for every build you install or upload (Play rejects repeats)
+        versionCode 4
+        versionName "1.3"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        // Play Store upload key. Paths/passwords live in ~/.gradle/gradle.properties (TODOBUBBLE_UPLOAD_*),
+        // never in this repo. Debug builds keep using the standard debug key so test installs
+        // update in place without wiping the app's data.
+        release {
+            if (project.hasProperty("TODOBUBBLE_UPLOAD_STORE_FILE")) {
+                storeFile file(TODOBUBBLE_UPLOAD_STORE_FILE)
+                storePassword TODOBUBBLE_UPLOAD_STORE_PASSWORD
+                keyAlias TODOBUBBLE_UPLOAD_KEY_ALIAS
+                keyPassword TODOBUBBLE_UPLOAD_KEY_PASSWORD
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (project.hasProperty("TODOBUBBLE_UPLOAD_STORE_FILE")) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+// Test (debug) builds keep the original package name so they keep updating the copy
+// already installed on the phone without losing its to-dos. Release/Play builds use
+// com.astephens.todoz. The Java code itself stays in the com.astephens.todobubble namespace.
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.applicationId.set("com.astephens.todobubble")
+    }
+}

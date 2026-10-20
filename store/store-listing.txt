@@ -1,0 +1,86 @@
+TO DOZ — GOOGLE PLAY STORE LISTING
+==================================
+
+WHICH FILE GOES WHERE (Play Console → Grow → Store presence → Main store listing)
+  App icon (512 x 512 PNG) .......... app-icon-512.png
+  Feature graphic (1024 x 500) ...... feature-graphic-1024x500.jpg
+  Phone screenshots (upload in order)
+    1. screenshot-1-your-todos.jpg
+    2. screenshot-2-floating-bubble.jpg
+    3. screenshot-3-make-it-yours.jpg
+    4. screenshot-4-moving-backgrounds.jpg
+    5. screenshot-5-plan-your-week.jpg
+    6. screenshot-6-reminders.jpg
+    7. screenshot-7-celebrate.jpg
+  App bundle (Release → Production/Testing) ... ..\ToDoz-release.aab
+
+All screenshots are 1080 x 1920 JPEG (Play allows 2–8 phone screenshots).
+Tablet screenshots are optional unless you mark the app as designed for tablets.
+
+
+APP NAME (max 30 characters)
+----------------------------
+To Doz: Groovy To-Do List
+
+
+SHORT DESCRIPTION (max 80 characters)
+-------------------------------------
+A trippy to-do list that floats over any app. Reminders, repeats & confetti!
+
+
+FULL DESCRIPTION (max 4000 characters)
+--------------------------------------
+To Doz is the to-do list that's actually fun to use.
+
+Jot things down in a tap, check them off with a burst of confetti, and shrink the whole list into a little floating bubble that sits over any app — so the next time something pops into your head, your list is one tap away.
+
+★ FLOATS OVER ANY APP
+Shrink To Doz into a bubble that stays on screen while you text, browse or watch. Drag it anywhere, tap it to open your list, drop it on the ✕ to close it.
+
+★ PLAN YOUR DAYS
+Give tasks a day and time, or leave them loose. The Plan view shows today, tomorrow and the whole week ahead at a glance.
+
+★ REMINDERS THAT GET IT DONE
+Get a notification when it's time — then mark it done or snooze it right from the notification. Optional daily summary of today's plan.
+
+★ REPEATING TASKS
+Every day, weekdays, every week or every month. Check one off and the next one is ready to go.
+
+★ MAKE IT YOURS
+• 40+ backgrounds: solid colors, gradients, tie-dye, psychedelic and dark & bold patterns
+• Color shift slider to spin any pattern into new colors
+• Living backgrounds: ripple when you touch, flowing colors, melting, rain, lightning storms, kaleidoscope, tunnel and bubbles
+• Pick your bubble icon: 👽 👾 🛸 🍄 🦄 👻 🔥 and more
+
+★ STAY ORGANIZED
+Optional categories with colors and filters, drag-and-drop to reorder, undo when you delete something by accident.
+
+★ YOUR DATA STAYS ON YOUR PHONE
+No account, no ads, no tracking. Everything is stored on your device. Save a backup file to Drive or email any time and restore it on a new phone.
+
+Make your to-do list a little more groovy. ✌️
+
+
+CATEGORY / TAGS
+---------------
+Category: Productivity
+Tags: to-do list, task manager, reminders, planner, checklist
+
+
+UPLOAD CHECKLIST (things Play will ask for)
+-------------------------------------------
+[ ] Privacy policy URL — required. Simple version: "To Doz stores all data on your
+    device only. It does not collect, share or sell any personal data."
+    (Host it free on a Google Doc set to public, Google Sites or GitHub Pages.)
+[ ] Data safety form — answer: no data collected, no data shared.
+[ ] Permissions declarations:
+    • "Display over other apps" (SYSTEM_ALERT_WINDOW) — explain: lets the user shrink
+      the to-do list into a floating bubble they can tap from any app.
+    • Foreground service, special use — explain: keeps the floating bubble on screen
+      while it's shown; it stops as soon as the bubble is closed or tapped.
+      Play may ask for a short video of the bubble — screen-record Shrink → bubble → tap.
+    • Exact alarms (only if Play flags it) — explain: on-time task reminders.
+[ ] Content rating questionnaire (all "No" → rated Everyone).
+[ ] Target audience: 13+ (simplest; avoids extra rules for kids' apps).
+[ ] Upload key backup: C:\Users\Andrew\keys\todobubble-upload.jks + its password
+    (in C:\Users\Andrew\.gradle\gradle.properties). Keep both somewhere safe.

@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2b6cb0">
+  <title>To Doz</title>
+  <link rel="manifest" href="manifest.json">
+  <!-- Paint the startup color before anything else loads, so launch never flashes white -->
+  <style id="bootBg">html { background: #c43bc4; }</style>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Startup screen: shown once when the app opens, then fades into the app -->
+  <div id="splash" aria-hidden="true">
+    <div class="splash-swirl"></div>
+    <div class="splash-bubble"><span id="splashIcon">✓</span></div>
+    <div class="splash-title">To Doz</div>
+  </div>
+  <!-- Tie-dye backgrounds are drawn here -->
+  <canvas id="bgCanvas" hidden></canvas>
+  <!-- Living background: ripples on touch and flowing colors (WebGL) -->
+  <canvas id="liveBg" hidden></canvas>
+  <!-- Confetti and sparks are drawn here, on top of everything -->
+  <canvas id="fxCanvas"></canvas>
+
+  <!-- Full panel -->
+  <main id="panel">
+    <header>
+      <div class="title">
+        <h1>To Doz</h1>
+        <p id="today" class="subtitle"></p>
+      </div>
+      <div class="header-buttons">
+        <button id="themeBtn" class="head-btn" data-icon="palette" title="Style" aria-label="Style"></button>
+        <button id="settingsBtn" class="head-btn" data-icon="sliders" title="Settings" aria-label="Settings"></button>
+        <!-- A live mini copy of the floating bubble: this is what you get when you shrink -->
+        <button id="minBtn" class="head-btn" title="Shrink to bubble" aria-label="Shrink to bubble">
+          <span class="mini-bubble"><span id="miniBubbleIcon">✓</span></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Background picker -->
+    <section id="themePanel" class="sheet" hidden>
+      <div class="sheet-head">
+        <h2>Style</h2>
+        <button type="button" class="sheet-close" data-close="themePanel" aria-label="Close style" data-icon="x"></button>
+      </div>
+      <h3>Background motion</h3>
+      <p class="hint">Touch the background in any mode (except Still) to make it ripple.</p>
+      <div id="motionChoices" class="row">
+        <button type="button" class="chip" data-motion="still">Still</button>
+        <button type="button" class="chip" data-motion="ripple">💧 Ripple</button>
+        <button type="button" class="chip" data-motion="flow">🌀 Flow</button>
+        <button type="button" class="chip" data-motion="melt">🫠 Melt</button>
+        <button type="button" class="chip" data-motion="rain">🌧️ Rain</button>
+        <button type="button" class="chip" data-motion="storm">⛈️ Storm</button>
+        <button type="button" class="chip" data-motion="kaleido">🔮 Kaleidoscope</button>
+        <button type="button" class="chip" data-motion="tunnel">🌌 Tunnel</button>
+        <button type="button" class="chip" data-motion="bubbles">🫧 Bubbles</button>
+      </div>
+      <h3>Color shift</h3>
+      <p class="hint">Turns the colors of any gradient or pattern around the color wheel.</p>
+      <div class="hue-row">
+        <input type="range" id="hueShift" min="0" max="359" step="1" value="0" aria-label="Color shift">
+        <button type="button" id="hueReset" class="text-btn">Reset</button>
+      </div>
+      <h3>Solid</h3>
+      <div id="solidSwatches" class="swatches"></div>
+      <label class="custom-color">Custom color <input type="color" id="customColor"></label>
+      <h3>Gradient</h3>
+      <div id="gradientSwatches" class="swatches"></div>
+      <h3>Tie-dye &amp; psychedelic</h3>
+      <div id="tiedyeSwatches" class="swatches"></div>
+      <h3>Dark &amp; bold</h3>
+      <div id="boldSwatches" class="swatches"></div>
+      <h3>Bubble icon</h3>
+      <div id="iconChoices" class="swatches"></div>
+      <label class="custom-color">Or type your own <input type="text" id="customIcon" maxlength="8" placeholder="🙂" class="icon-input"></label>
+    </section>
+
+    <!-- Categories + reminders -->
+    <section id="settingsPanel" class="sheet" hidden>
+      <div class="sheet-head">
+        <h2>Settings</h2>
+        <button type="button" class="sheet-close" data-close="settingsPanel" aria-label="Close settings" data-icon="x"></button>
+      </div>
+      <h3>Categories</h3>
+      <p class="hint">Optional. Items don't need a category.</p>
+      <ul id="catList"></ul>
+      <form id="catForm" class="row" autocomplete="off">
+        <input id="catName" type="text" placeholder="New category (e.g. Work)" maxlength="24">
+        <input id="catColor" type="color">
+        <button type="submit" class="small-btn">Add</button>
+      </form>
+
+      <h3>Backup</h3>
+      <p class="hint">Saves all your tasks, categories and style to a file. Keep it in Google Drive, email it to yourself, etc. Use it to move to a new phone or after reinstalling.</p>
+      <div class="row">
+        <button id="backupBtn" type="button" class="small-btn">Save backup</button>
+        <button id="restoreBtn" type="button" class="small-btn">Restore from backup</button>
+        <input id="restoreFile" type="file" accept="application/json,.json" hidden>
+      </div>
+      <p id="backupStatus" class="hint"></p>
+
+      <h3>Fun</h3>
+      <label class="toggle"><input type="checkbox" id="celebrateOn"> 🎉 Confetti when you finish something</label>
+      <label class="toggle"><input type="checkbox" id="soundOn"> 🔊 Sounds</label>
+      <div class="row">
+        <button id="testSound" type="button" class="small-btn">Test sound</button>
+      </div>
+      <p class="hint">Sounds use your phone's media volume (not the ringer). Can't hear them? Press volume up while the app is open.</p>
+
+      <h3>Reminders</h3>
+      <p class="hint">To get reminded about an item, give it a time and turn on 🔔 Remind me.</p>
+      <label class="toggle"><input type="checkbox" id="summaryOn"> Daily plan summary at <input type="time" id="summaryTime"></label>
+      <div class="row">
+        <button id="testNotify" type="button" class="small-btn">Send test reminder</button>
+      </div>
+      <p id="notifyStatus" class="hint"></p>
+      <div id="exactRow" hidden>
+        <p class="hint">Android may deliver reminders a few minutes late unless you allow exact timing.</p>
+        <button id="exactBtn" type="button" class="small-btn">Make reminders exact</button>
+      </div>
+
+      <p id="appVersion" class="hint version"></p>
+    </section>
+
+    <!-- Add item (can be collapsed to a slim bar) -->
+    <button type="button" id="composerOpen" class="composer-open" hidden>
+      <span class="composer-open-label"><span data-icon="plus"></span>Add something...</span><span data-icon="chevron-down"></span>
+    </button>
+
+    <section id="composer">
+    <form id="addForm" autocomplete="off">
+      <input id="newItem" type="text" placeholder="Add something..." enterkeyhint="done">
+      <button type="submit" class="add-btn" aria-label="Add" data-icon="plus"></button>
+      <button type="button" id="composerHide" class="icon-btn" title="Hide the add box" aria-label="Hide the add box" data-icon="chevron-up"></button>
+    </form>
+
+    <button type="button" id="detailsBtn" class="details-toggle">
+      <span class="details-icon" data-icon="calendar"></span><span id="detailsText">Add day, time, or category</span><span id="detailsArrow" data-icon="chevron-down"></span>
+    </button>
+
+    <div id="addDetails" hidden>
+      <div class="detail-row">
+        <span class="detail-label">When</span>
+        <input type="datetime-local" id="addWhen" aria-label="Day and time">
+        <button type="button" class="chip" data-day="0">Today</button>
+        <button type="button" class="chip" data-day="1">Tomorrow</button>
+      </div>
+      <div class="detail-row" id="addWhenOptions" hidden>
+        <span class="detail-label"></span>
+        <label class="toggle"><input type="checkbox" id="addAllDay"> All day</label>
+        <label class="toggle" id="addRemindField"><input type="checkbox" id="addRemind" checked> 🔔 Remind me</label>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Repeat</span>
+        <select id="addRepeat" aria-label="Repeat">
+          <option value="">Never</option>
+          <option value="daily">Every day</option>
+          <option value="weekdays">Weekdays (Mon–Fri)</option>
+          <option value="weekly">Every week</option>
+          <option value="monthly">Every month</option>
+        </select>
+      </div>
+      <div class="detail-row" id="addCategoryRow">
+        <span class="detail-label">Category</span>
+        <select id="addCategory" aria-label="Category"></select>
+      </div>
+      <div class="detail-row">
+        <button type="button" id="clearDetails" class="text-btn">Clear these</button>
+      </div>
+    </div>
+    </section>
+
+    <nav class="tabs">
+      <button data-view="list">List</button>
+      <button data-view="plan">Plan</button>
+    </nav>
+
+    <div id="filters"></div>
+
+    <div id="views">
+      <ul id="list"></ul>
+      <div id="plan" hidden></div>
+      <p id="empty">Nothing to do. Nice.</p>
+    </div>
+
+    <footer>
+      <span id="count"></span>
+      <button id="clearDone" class="text-btn">Clear done</button>
+    </footer>
+  </main>
+
+  <!-- Minimized bubble -->
+  <button id="bubble" hidden aria-label="Open to-do list">
+    <span class="bubble-icon" id="bubbleIcon">✓</span>
+    <span id="badge"></span>
+  </button>
+
+  <!-- Undo bar -->
+  <div id="snack" hidden role="status">
+    <span id="snackText"></span>
+    <button id="snackUndo" type="button">Undo</button>
+  </div>
+
+  <!-- In-app reminder popup -->
+  <div id="toast" hidden role="status">
+    <strong id="toastTitle"></strong>
+    <div id="toastBody"></div>
+  </div>
+
+  <!-- Edit item -->
+  <dialog id="editDialog">
+    <form method="dialog">
+      <h3>Edit item</h3>
+      <input id="editText" type="text" aria-label="Item text">
+      <label class="field">When <input type="datetime-local" id="editWhen"></label>
+      <div class="row" id="editWhenOptions">
+        <label class="toggle"><input type="checkbox" id="editAllDay"> All day</label>
+        <label class="toggle" id="editRemindField"><input type="checkbox" id="editRemind"> 🔔 Remind me</label>
+        <button type="button" id="editClearWhen" class="text-btn">No date</button>
+      </div>
+      <label class="field">Repeat <select id="editRepeat" aria-label="Repeat">
+          <option value="">Never</option>
+          <option value="daily">Every day</option>
+          <option value="weekdays">Weekdays (Mon–Fri)</option>
+          <option value="weekly">Every week</option>
+          <option value="monthly">Every month</option>
+        </select></label>
+      <label class="field" id="editCategoryField">Category <select id="editCategory"></select></label>
+      <!-- Save is first so pressing Enter saves; row-reverse puts it on the right -->
+      <div class="dialog-buttons">
+        <button value="save" class="small-btn primary">Save</button>
+        <button value="cancel" class="small-btn">Cancel</button>
+        <button value="delete" class="small-btn danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="livebg.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "appId": "com.astephens.todoz",
+  "appName": "To Doz",
+  "webDir": "www",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_check",
+      "iconColor": "#d63fb0"
+    }
+  },
+  "backgroundColor": "#c43bc4"
+}
