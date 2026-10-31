@@ -1,5 +1,5 @@
 // To Doz — to-do list with optional categories, day planning, reminders,
-// custom backgrounds (solid / gradient / tie-dye) and a minimize-to-bubble mode.
+// custom backgrounds (solid / gradient / tie-dye / animated scene) and a minimize-to-bubble mode.
 // Everything is saved in localStorage, so it survives closing the app.
 
 const STORAGE_KEY = "todoBubble.v1";
@@ -1001,6 +1001,11 @@ function findPattern(id) {
   return t && { ...t, palette: t.palette.map((hex) => shiftHex(hex, state.hue)) };
 }
 
+function findScene(id) {
+  const s = Scenes.PRESETS.find((x) => x.id === id);
+  return s && { ...s, css: shiftColors(s.css), accent: shiftHex(s.accent, state.hue) };
+}
+
 const tieDyeCache = {};
 function tieDyeDataURL(t, size) {
   const key = t.id + size + ":" + t.palette.join("");
@@ -1025,8 +1030,15 @@ function applyBg(bg) {
   let accent = SOLIDS[0], light = false, vivid = false, image = "none", bubbleBg;
   const g = bg.kind === "gradient" && findGradient(bg.value);
   const t = bg.kind === "tiedye" && findPattern(bg.value);
+  const scene = bg.kind === "scene" && findScene(bg.value);
 
-  if (g) {
+  if (scene) {
+    accent = scene.accent;
+    vivid = true;
+    // Without WebGL the scene's preview stands in as a still background
+    image = Scenes.ok ? "none" : scene.css;
+    bubbleBg = scene.css;
+  } else if (g) {
     accent = g.accent;
     light = !!g.light;
     vivid = !light;
@@ -1059,6 +1071,12 @@ function applyBg(bg) {
   $("bgCanvas").hidden = !t || live;
   if (t && !live) drawTieDyeBackground();
   updateLiveBackground();
+  sceneCanvas.hidden = !scene || !Scenes.ok;
+  if (scene) {
+    Scenes.setStill(state.motion === "still");
+    Scenes.setHue(state.hue);
+    Scenes.setScene(scene.id);
+  }
 
   const key = bg.kind + ":" + bg.value;
   for (const s of document.querySelectorAll(".swatch")) s.classList.toggle("selected", s.dataset.key === key);
@@ -1071,7 +1089,12 @@ function applyBg(bg) {
 const liveCanvas = $("liveBg");
 LiveBg.init(liveCanvas);
 
-const useLiveBackground = () => LiveBg.ok && state.motion !== "still";
+// Animated scenes (scenes.js) draw their own moving picture, so they don't go through LiveBg.
+const sceneCanvas = $("sceneBg");
+Scenes.init(sceneCanvas);
+
+const useLiveBackground = () => LiveBg.ok && state.motion !== "still" && state.bg.kind !== "scene";
+const useScene = () => Scenes.ok && state.bg.kind === "scene";
 
 // Paint the current theme into a plain image for the live background to distort.
 function backgroundImage() {
@@ -1132,6 +1155,7 @@ for (const chip of document.querySelectorAll("[data-motion]")) {
 let lastTrail = 0;
 document.addEventListener("pointerdown", (e) => {
   if (useLiveBackground()) LiveBg.drop(e.clientX, e.clientY, 1);
+  if (useScene()) Scenes.drop(e.clientX, e.clientY);
 }, true);
 document.addEventListener("pointermove", (e) => {
   if (!e.buttons || !useLiveBackground()) return;
@@ -1153,6 +1177,7 @@ function addSwatch(containerId, bg, css) {
 for (const c of SOLIDS) addSwatch("solidSwatches", { kind: "solid", value: c }, c);
 for (const g of GRADIENTS) addSwatch("gradientSwatches", { kind: "gradient", value: g.id }, "");
 for (const t of TIEDYES) addSwatch(t.group === "bold" ? "boldSwatches" : "tiedyeSwatches", { kind: "tiedye", value: t.id }, "");
+for (const s of Scenes.PRESETS) addSwatch("sceneSwatches", { kind: "scene", value: s.id }, "");
 
 // Gradient and pattern previews follow the color shift
 function paintSwatchPreviews() {
@@ -1160,6 +1185,7 @@ function paintSwatchPreviews() {
     const [kind, id] = s.dataset.key.split(":");
     if (kind === "gradient") s.style.background = findGradient(id).css;
     if (kind === "tiedye") s.style.background = `url(${tieDyeDataURL(findPattern(id), 64)}) center / cover`;
+    if (kind === "scene") s.style.background = findScene(id).css;
   }
 }
 
@@ -1576,14 +1602,23 @@ if (NativeNotif) {
   });
 }
 
+// Returns null when nothing is planned for that day and nothing is overdue, so no summary is sent.
+// With only overdue to-dos, the summary lists those instead.
 function summaryText(key) {
   const todays = state.items.filter((i) => !i.done && i.date === key).sort(byTime);
-  const overdue = state.items.filter((i) => !i.done && i.date && i.date < key).length;
-  let body = todays.length
-    ? todays.slice(0, 5).map((i) => (i.time ? formatTime(i.time) + "  " : "• ") + i.text).join("\n")
-    : "Nothing planned today.";
-  if (todays.length > 5) body += `\n+${todays.length - 5} more`;
-  if (overdue) body += `\n${overdue} overdue`;
+  const overdue = state.items.filter((i) => !i.done && i.date && i.date < key);
+  if (!todays.length && !overdue.length) return null;
+  const listLines = (items, line) => {
+    let text = items.slice(0, 5).map(line).join("\n");
+    if (items.length > 5) text += `\n+${items.length - 5} more`;
+    return text;
+  };
+  if (!todays.length) {
+    overdue.sort((a, b) => a.date.localeCompare(b.date) || byTime(a, b));
+    return { title: `${state.icon} ⏰ Overdue (${overdue.length})`, body: listLines(overdue, (i) => "• " + i.text) };
+  }
+  let body = listLines(todays, (i) => (i.time ? formatTime(i.time) + "  " : "• ") + i.text);
+  if (overdue.length) body += `\n${overdue.length} overdue`;
   return { title: `${state.icon} 📋 Today's plan (${todays.length})`, body };
 }
 
@@ -1636,10 +1671,11 @@ async function scheduleNative() {
         const key = addDays(n);
         const at = parseDay(key);
         at.setHours(h, m, 0, 0);
-        if (at.getTime() <= now) continue;
+        const summary = summaryText(key);
+        if (at.getTime() <= now || !summary) continue;
         list.push({
           id: notificationId(`summary:${key}`),
-          ...summaryText(key),
+          ...summary,
           schedule: { at, allowWhileIdle: true },
           extra: { at: at.getTime() },
         });
@@ -1737,10 +1773,8 @@ function checkReminders() {
     if (!state.notified[key] && now >= at.getTime()) {
       state.notified[key] = true;
       changed = true;
-      if (now - at.getTime() < SUMMARY_GRACE_MS) {
-        const { title, body } = summaryText(today);
-        notify(title, body);
-      }
+      const summary = summaryText(today);
+      if (summary && now - at.getTime() < SUMMARY_GRACE_MS) notify(summary.title, summary.body);
     }
   }
 
@@ -1833,6 +1867,7 @@ function setMinimized(min) {
   bubble.hidden = !min;
   document.body.classList.toggle("minimized", min);
   if (min) placeBubble();
+  else if (useScene()) Scenes.redraw(); // its loop stopped while hidden
   save();
 }
 
@@ -1858,6 +1893,10 @@ function bubbleColors() {
   if (bg.kind === "tiedye") {
     const t = findPattern(bg.value);
     if (t) return t.palette;
+  }
+  if (bg.kind === "scene") {
+    const s = findScene(bg.value);
+    if (s) return [...new Set(s.css.match(/#[0-9a-f]{6}/gi))];
   }
   return [bg.kind === "solid" ? bg.value : SOLIDS[0]];
 }

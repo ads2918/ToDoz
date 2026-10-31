@@ -43,7 +43,7 @@ body {
   overflow: hidden;
 }
 
-#bgCanvas, #liveBg {
+#bgCanvas, #liveBg, #sceneBg {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -643,7 +643,7 @@ footer {
 
 /* When minimized, show a plain backdrop so it reads as "closed" */
 body.minimized { background: #222; }
-body.minimized #bgCanvas, body.minimized #liveBg { display: none; }
+body.minimized #bgCanvas, body.minimized #liveBg, body.minimized #sceneBg { display: none; }
 
 /* ---------- Toast + dialog (fixed dark style, readable on any background) ---------- */
 
